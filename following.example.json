@@ -1,0 +1,24 @@
+{
+  "accounts": [
+    {
+      "id": "1000000000000000001",
+      "username": "ada_example",
+      "name": "Ada Example",
+      "bio": "Fake account so the file shape is obvious. Not a real profile.",
+      "url": "https://x.com/ada_example",
+      "status": "pending",
+      "type": "",
+      "note": ""
+    },
+    {
+      "id": "grace_example",
+      "username": "grace_example",
+      "name": "Grace Example",
+      "bio": "Second fake row. The id is the username when a numeric id was never captured.",
+      "url": "https://x.com/grace_example",
+      "status": "pending",
+      "type": "tech",
+      "note": ""
+    }
+  ]
+}
