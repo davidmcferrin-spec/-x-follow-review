@@ -21,8 +21,9 @@ function followingUrl(url) {
 
 chrome.runtime.onMessage.addListener((message) => {
   if (!message || message.type !== "xfr-progress") return;
-  countEl.textContent = String(message.count || 0);
-  setStatus("Scrolling slowly. Step " + message.step + " of 40. Leave this popup open.");
+  const count = message.count || 0;
+  countEl.textContent = String(count);
+  setStatus("Captured " + count + ". Scrolling the Following list. Leave this popup open until it finishes.");
 });
 
 async function send(tabId, type) {
@@ -43,9 +44,12 @@ async function run(type) {
       setStatus("This tab is not a Following page. Open https://x.com/you/following and try again.");
       return;
     }
-    setStatus(type === "capture-scroll"
-      ? "Scrolling the Following list slowly, up to 40 steps. Leave this popup open."
-      : "Reading the accounts currently on screen.");
+    if (type === "capture-scroll") {
+      countEl.textContent = "0";
+      setStatus("Scrolling the Following list. The captured count stays here the whole time. Leave this popup open until it finishes.");
+    } else {
+      setStatus("Reading the accounts currently on screen.");
+    }
     let response;
     try {
       response = await send(tab.id, type);
@@ -80,7 +84,10 @@ async function run(type) {
       setStatus("Import rejected: " + ((data && data.error) || res.status));
       return;
     }
-    setStatus("Imported. Added " + data.added + ", updated " + data.updated + ", total " + data.total + ". Review at http://localhost:8000/dashboard.html");
+    const ceiling = type === "capture-scroll" && response.exhausted === false
+      ? " Hit the safety stop before the list went quiet, so this capture may be incomplete."
+      : "";
+    setStatus("Imported. Added " + data.added + ", updated " + data.updated + ", total " + data.total + ". Review at http://localhost:8000/dashboard.html" + ceiling);
   } finally {
     visibleBtn.disabled = false;
     scrollBtn.disabled = false;
