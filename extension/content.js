@@ -188,6 +188,14 @@
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  // Quiet scrolls in a row before the Following list counts as finished.
+  // Long enough for a virtualized list to catch up after a slow load.
+  const STAGNANT_SCROLLS = 12;
+  const SCROLL_PAUSE_MS = 750;
+  // Safety only. At the pace seen on a real Following page (~6 new rows per
+  // step), this still covers well over 400 accounts before it gives up.
+  const MAX_SCROLL_STEPS = 2000;
+
   function scrollOnce() {
     const cell = document.querySelector('[data-testid="primaryColumn"] [data-testid="UserCell"]')
       || document.querySelector('[data-testid="UserCell"]');
@@ -204,59 +212,77 @@
     for (const target of targets) {
       if (target === window) {
         const before = window.scrollY;
-        window.scrollBy(0, Math.floor(window.innerHeight * 0.8));
+        const delta = Math.floor(window.innerHeight * 0.8);
+        window.scrollTo(0, before + delta);
         if (Math.abs(window.scrollY - before) > 1) return true;
       } else {
         const before = target.scrollTop;
-        target.scrollBy(0, Math.floor(target.clientHeight * 0.8));
+        target.scrollTop = before + Math.floor(target.clientHeight * 0.8);
         if (Math.abs(target.scrollTop - before) > 1) return true;
       }
     }
     return false;
   }
 
+  function reportProgress(count, step) {
+    try {
+      chrome.runtime.sendMessage({ type: "xfr-progress", count: count, step: step }, () => {
+        void chrome.runtime.lastError;
+      });
+    } catch (err) {
+      /* popup may have closed */
+    }
+  }
+
+  function mergeAccount(map, account) {
+    const key = account.username.toLowerCase();
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, account);
+      return true;
+    }
+    const id = /^\d{4,}$/.test(prev.id) ? prev.id : (/^\d{4,}$/.test(account.id) ? account.id : prev.id);
+    const bio = (account.bio || "").length > (prev.bio || "").length ? account.bio : prev.bio;
+    const name = prev.name && prev.name.toLowerCase() !== prev.username.toLowerCase()
+      ? prev.name
+      : (account.name || prev.name);
+    map.set(key, {
+      id: id,
+      username: prev.username,
+      name: name || prev.username,
+      bio: bio || "",
+      url: "https://x.com/" + prev.username
+    });
+    return false;
+  }
+
   async function captureAndScroll() {
     const first = collectVisible();
     if (!first.ok) return first;
-    const map = new Map(first.accounts.map((account) => [account.username.toLowerCase(), account]));
+    const map = new Map();
+    for (const account of first.accounts) mergeAccount(map, account);
+    reportProgress(map.size, 0);
     let stagnant = 0;
-    for (let step = 1; step <= 40; step++) {
+    let steps = 0;
+    while (steps < MAX_SCROLL_STEPS && stagnant < STAGNANT_SCROLLS) {
+      steps++;
       scrollOnce();
-      await sleep(750);
+      await sleep(SCROLL_PAUSE_MS);
       const snap = collectVisible();
       if (!snap.ok) return snap;
       let added = 0;
       for (const account of snap.accounts) {
-        const key = account.username.toLowerCase();
-        if (!map.has(key)) added++;
-        const prev = map.get(key);
-        if (!prev) {
-          map.set(key, account);
-          continue;
-        }
-        const id = /^\d{4,}$/.test(prev.id) ? prev.id : (/^\d{4,}$/.test(account.id) ? account.id : prev.id);
-        const bio = (account.bio || "").length > (prev.bio || "").length ? account.bio : prev.bio;
-        const name = prev.name && prev.name.toLowerCase() !== prev.username.toLowerCase()
-          ? prev.name
-          : (account.name || prev.name);
-        map.set(key, {
-          id: id,
-          username: prev.username,
-          name: name || prev.username,
-          bio: bio || "",
-          url: "https://x.com/" + prev.username
-        });
+        if (mergeAccount(map, account)) added++;
       }
-      try {
-        chrome.runtime.sendMessage({ type: "xfr-progress", count: map.size, step: step });
-      } catch (err) {
-        /* popup may have closed */
-      }
+      reportProgress(map.size, steps);
       if (added === 0) stagnant++;
       else stagnant = 0;
-      if (stagnant >= 3) break;
     }
-    return { ok: true, accounts: [...map.values()] };
+    return {
+      ok: true,
+      accounts: [...map.values()],
+      exhausted: stagnant >= STAGNANT_SCROLLS
+    };
   }
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

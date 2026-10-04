@@ -24,7 +24,7 @@ http://localhost:8000/dashboard.html
 2. Log into X and open your Following page: `https://x.com/<you>/following` (twitter.com works too).
 3. Use the extension popup.
    - **Capture accounts on this page** reads only the rows already rendered.
-   - **Capture and scroll** moves the Following list slowly, at most 40 viewport steps, and stops after 3 steps with no new usernames. Leave the popup open until it finishes.
+   - **Capture and scroll** keeps moving the Following list until it is exhausted. It stops only after 12 scrolls in a row add no new usernames, long enough to ride out a virtualized list and a slow load. A safety ceiling of 2000 scrolls stops a stuck page, and that ceiling is high enough for well over 400 accounts. The popup shows the running captured count the whole time. Leave the popup open until it finishes.
 4. The popup POSTs `{command:"import", accounts:[...]}` to `http://localhost:8000/api.php`. If that server is not running, the popup says so.
 5. Review on the dashboard. Open a profile there only when you want to; the extension never clicks Follow or Unfollow.
 
@@ -94,7 +94,7 @@ Import matches on `id`, and falls back to username when the id was missing or wa
 
 ## Capture limits
 
-X virtualizes the Following list and changes its markup. The content script only sees DOM that is currently rendered. It looks for links whose path is `/username` inside Following rows, skips nav and sidebar links (home, explore, notifications, messages, settings, and similar) and the profile owner, and reads a display name and bio only when they are in that same row. A numeric id is stored only when a data attribute or link clearly has one; otherwise the id is the username. Scroll mode is capped and is not a full export of everyone you follow. Expect to capture, scroll the page yourself, and capture again.
+X virtualizes the Following list and changes its markup. The content script only sees DOM that is currently rendered. It looks for links whose path is `/username` inside Following rows, skips nav and sidebar links (home, explore, notifications, messages, settings, and similar) and the profile owner, and reads a display name and bio only when they are in that same row. A numeric id is stored only when a data attribute or link clearly has one; otherwise the id is the username. Scroll mode keeps going until 12 consecutive scrolls add no new usernames, or until it reaches a safety ceiling of 2000 scrolls. It never clicks Follow or Unfollow. A later capture can fill a row X failed to render.
 
 ## API
 
