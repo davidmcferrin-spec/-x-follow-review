@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "X Follow Review",
+  "version": "1.0.0",
+  "description": "Capture accounts from your X Following page into a local review queue. Does not follow, unfollow, scroll on its own, or call the X API.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_title": "X Follow Review",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

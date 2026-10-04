@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>X Follow Review</title>
+  <style>
+    body {
+      margin: 0;
+      width: 320px;
+      font: 13px/1.4 system-ui, sans-serif;
+      background: #14171a;
+      color: #e7e9ec;
+    }
+    main { padding: 12px; }
+    h1 { font-size: 14px; margin: 0 0 6px; font-weight: 650; }
+    p { margin: 0 0 10px; color: #9aa3ad; }
+    button {
+      width: 100%;
+      margin: 0 0 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #2c3238;
+      background: #22272d;
+      color: inherit;
+      cursor: pointer;
+      text-align: left;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    #count { color: #e7e9ec; }
+    #status { min-height: 3.2em; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>X follow review</h1>
+    <p>Reads accounts already on your Following page and sends them to the local queue. It does not follow or unfollow.</p>
+    <button type="button" id="visibleBtn">Capture accounts on this page</button>
+    <button type="button" id="scrollBtn">Capture and scroll</button>
+    <p>Captured <span id="count">0</span></p>
+    <p id="status">Open x.com/you/following, then capture.</p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

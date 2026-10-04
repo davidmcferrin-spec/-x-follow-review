@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>X follow review</title>
+  <style>
+    :root {
+      --bg: #101214;
+      --card: #181b1f;
+      --text: #e7e9ec;
+      --muted: #9aa3ad;
+      --line: #2c3238;
+      --keep: #8fceb0;
+      --drop: #e3a39c;
+      --move: #e4c98a;
+      --bar: #8fb4cc;
+      --chip: #242a30;
+      --btn: #22272d;
+    }
+    [data-theme="light"] {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #1c1f24;
+      --muted: #5c6570;
+      --line: #e1e4e8;
+      --keep: #1d6b45;
+      --drop: #8d342c;
+      --move: #7a5410;
+      --bar: #3d6f8f;
+      --chip: #eef1f4;
+      --btn: #f7f8f9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.45 system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    main { max-width: 880px; margin: 0 auto; padding: 20px 16px 40px; }
+    header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+    h1 { font-size: 18px; font-weight: 650; margin: 0; letter-spacing: 0; }
+    .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    button, input { font: inherit; color: inherit; }
+    button {
+      background: var(--btn);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    button:hover { border-color: var(--muted); }
+    button:disabled { opacity: 0.45; cursor: default; }
+    button kbd, .legend kbd {
+      font: 11px/1 ui-monospace, monospace;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 0 4px;
+      margin-right: 4px;
+    }
+    .stats { display: flex; flex-wrap: wrap; gap: 14px; margin: 16px 0 8px; color: var(--muted); }
+    .stats b { color: var(--text); font-weight: 650; }
+    .progress { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+    .progress > div { height: 100%; width: 0; background: var(--bar); }
+    .card {
+      margin-top: 14px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .handle { font-size: 20px; font-weight: 650; margin: 0; }
+    .name { margin: 2px 0 8px; color: var(--muted); }
+    .bio { margin: 0; white-space: pre-wrap; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .chip { background: var(--chip); border-radius: 99px; padding: 2px 8px; color: var(--muted); font-size: 12px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+    button.keep { color: var(--keep); }
+    button.unfollow { color: var(--drop); }
+    button.moved { color: var(--move); }
+    button.on { border-color: var(--bar); color: var(--bar); }
+    .note { flex: 1; min-width: 220px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+    .legend { color: var(--muted); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+    th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-weight: 550; }
+    #status { min-height: 1.4em; color: var(--muted); margin: 12px 0 0; }
+    .empty { color: var(--muted); margin: 0; }
+    button.active-type { border-color: var(--bar); color: var(--text); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>X follow review</h1>
+        <p class="sub">You decide. This page never follows or unfollows anyone.</p>
+      </div>
+      <button type="button" id="themeBtn">Light theme</button>
+    </header>
+
+    <div class="stats">
+      <span>Total <b id="total">0</b></span>
+      <span>Pending <b id="pending">0</b></span>
+      <span>Done <b id="done">0</b></span>
+      <span>Keep <b id="keepCount">0</b></span>
+      <span>Unfollow <b id="unfollowCount">0</b></span>
+      <span>Moved <b id="movedCount">0</b></span>
+      <span><b id="percentage">0%</b></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div id="progressFill"></div></div>
+
+    <section class="card" id="currentCard">
+      <p class="empty">Loading…</p>
+    </section>
+
+    <div class="row">
+      <button type="button" class="keep" id="keepBtn"><kbd>1</kbd>Keep</button>
+      <button type="button" class="unfollow" id="unfollowBtn"><kbd>2</kbd>Unfollow</button>
+      <button type="button" class="moved" id="movedBtn"><kbd>3</kbd>Moved</button>
+      <button type="button" id="openBtn"><kbd>O</kbd>Open</button>
+      <button type="button" id="refreshBtn"><kbd>R</kbd>Refresh</button>
+    </div>
+    <div class="row">
+      <button type="button" id="autoOpenBtn">Auto-open: off</button>
+      <button type="button" id="soundBtn">Sound: off</button>
+    </div>
+    <div class="row legend" id="typeLegend"></div>
+    <div class="row">
+      <input class="note" id="note" type="text" maxlength="2000" placeholder="Note. Enter saves. Esc leaves this field." autocomplete="off">
+      <button type="button" id="noteBtn">Save note</button>
+    </div>
+
+    <section class="card">
+      <div class="legend">By type. Pending is still in the queue. Unfollow and moved are decisions you still do by hand.</div>
+      <table>
+        <thead>
+          <tr><th>Type</th><th>Pending</th><th>Unfollow</th><th>Moved</th><th>Keep</th></tr>
+        </thead>
+        <tbody id="typeBody"></tbody>
+      </table>
+    </section>
+    <p id="status">Ready</p>
+  </main>
+
+  <script>
+    const API_URL = "api.php";
+    const TYPES = [
+      ["t", "tech"],
+      ["n", "news"],
+      ["p", "porn"],
+      ["g", "girls"],
+      ["f", "fake"],
+      ["e", "personal"],
+      ["u", "other"]
+    ];
+
+    let current = null;
+    let seenId = null;
+    let busy = false;
+    let openTimer = 0;
+    let audioCtx = null;
+    let autoOpen = localStorage.getItem("xfr-auto-open") === "true";
+    let soundOn = localStorage.getItem("xfr-sound") === "true";
+
+    const noteEl = document.getElementById("note");
+    const statusEl = document.getElementById("status");
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem("xfr-theme");
+      const dark = saved !== "light";
+      document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+      document.getElementById("themeBtn").textContent = dark ? "Light theme" : "Dark theme";
+    }
+
+    function toggleTheme() {
+      const dark = document.documentElement.getAttribute("data-theme") === "dark";
+      document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+      localStorage.setItem("xfr-theme", dark ? "light" : "dark");
+      initTheme();
+    }
+
+    function syncToggles() {
+      const autoBtn = document.getElementById("autoOpenBtn");
+      const soundBtn = document.getElementById("soundBtn");
+      autoBtn.textContent = "Auto-open: " + (autoOpen ? "on" : "off");
+      soundBtn.textContent = "Sound: " + (soundOn ? "on" : "off");
+      autoBtn.classList.toggle("on", autoOpen);
+      soundBtn.classList.toggle("on", soundOn);
+    }
+
+    function playBeep() {
+      if (!soundOn) return;
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 740;
+      gain.gain.value = 0.04;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      setTimeout(() => osc.stop(), 90);
+    }
+
+    function profileUrl(account) {
+      if (!account || !/^[A-Za-z0-9_]{1,15}$/.test(account.username || "")) return "";
+      return "https://x.com/" + account.username;
+    }
+
+    function cancelOpen() {
+      if (openTimer) {
+        clearTimeout(openTimer);
+        openTimer = 0;
+      }
+    }
+
+    function scheduleOpen(url) {
+      cancelOpen();
+      openTimer = setTimeout(() => {
+        openTimer = 0;
+        window.open(url, "_blank", "noopener");
+      }, 400);
+    }
+
+    function el(tag, text, className) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = text;
+      return node;
+    }
+
+    function renderCurrent(account, total) {
+      const card = document.getElementById("currentCard");
+      card.replaceChildren();
+      if (!total) {
+        const p = el("p", "", "empty");
+        p.appendChild(document.createTextNode("No accounts loaded yet. In Chrome or Edge, load the unpacked extension from "));
+        const code = el("code", "extension/");
+        p.appendChild(code);
+        p.appendChild(document.createTextNode(", open your X Following page, and capture the rows on screen. Then come back here. Nothing is followed or unfollowed for you."));
+        card.appendChild(p);
+        noteEl.value = "";
+        return;
+      }
+      if (!account) {
+        card.appendChild(el("p", "Nothing pending. Every loaded account already has a keep, unfollow, or moved decision. Capture more from the Following page if the list was only partly on screen.", "empty"));
+        noteEl.value = "";
+        return;
+      }
+      const handle = el("p", "@" + account.username, "handle");
+      card.appendChild(handle);
+      card.appendChild(el("p", account.name || "", "name"));
+      card.appendChild(el("p", account.bio || "No bio captured.", "bio"));
+      const meta = el("div", null, "meta");
+      if (account.type) meta.appendChild(el("span", account.type, "chip"));
+      if (account.note) meta.appendChild(el("span", account.note, "chip"));
+      if (meta.childNodes.length) card.appendChild(meta);
+      if (document.activeElement !== noteEl) noteEl.value = account.note || "";
+    }
+
+    function renderTypes(byType) {
+      const body = document.getElementById("typeBody");
+      body.replaceChildren();
+      const keys = TYPES.map((pair) => pair[1]);
+      if (byType && byType[""]) keys.push("");
+      keys.forEach((key) => {
+        const row = (byType && byType[key]) || { pending: 0, unfollow: 0, moved: 0, keep: 0 };
+        const tr = document.createElement("tr");
+        [key || "(none)", row.pending || 0, row.unfollow || 0, row.moved || 0, row.keep || 0].forEach((value, i) => {
+          tr.appendChild(el(i === 0 ? "th" : "td", String(value)));
+        });
+        body.appendChild(tr);
+      });
+      document.querySelectorAll("#typeLegend button").forEach((btn) => {
+        btn.classList.toggle("active-type", !!current && btn.dataset.type === current.type);
+      });
+    }
+
+    function setBusy(next) {
+      busy = next;
+      ["keepBtn", "unfollowBtn", "movedBtn", "noteBtn"].forEach((id) => {
+        document.getElementById(id).disabled = next || !current;
+      });
+      document.getElementById("openBtn").disabled = !current;
+      TYPES.forEach((pair) => {
+        const btn = document.querySelector('#typeLegend button[data-type="' + pair[1] + '"]');
+        if (btn) btn.disabled = next || !current;
+      });
+    }
+
+    async function fetchData(message) {
+      try {
+        const res = await fetch(API_URL, { cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          setStatus(data.error || "Could not load the queue");
+          setBusy(false);
+          return;
+        }
+        document.getElementById("total").textContent = data.total;
+        document.getElementById("pending").textContent = data.pending;
+        document.getElementById("done").textContent = data.done;
+        const by = data.by_status || {};
+        document.getElementById("keepCount").textContent = by.keep || 0;
+        document.getElementById("unfollowCount").textContent = by.unfollow || 0;
+        document.getElementById("movedCount").textContent = by.moved || 0;
+        const pct = data.percentage || 0;
+        document.getElementById("percentage").textContent = pct + "%";
+        document.getElementById("progressFill").style.width = Math.max(0, Math.min(100, pct)) + "%";
+        document.title = data.current && data.current.username
+          ? "@" + data.current.username + " · X follow review"
+          : "X follow review";
+
+        const next = data.current || null;
+        const nextId = next && next.id ? next.id : "";
+        const isNew = nextId !== "" && nextId !== seenId;
+        if (nextId !== seenId && document.activeElement === noteEl) noteEl.blur();
+        current = next;
+        renderCurrent(current, data.total);
+        renderTypes(data.by_type || {});
+        setBusy(false);
+        if (isNew) {
+          seenId = nextId;
+          const url = profileUrl(current);
+          if (soundOn) playBeep();
+          if (autoOpen && url) scheduleOpen(url);
+          setStatus("Loaded @" + current.username);
+        } else if (!nextId) {
+          seenId = null;
+          setStatus(data.total ? "Queue clear" : "No accounts yet");
+        } else {
+          setStatus(message || "Ready");
+        }
+      } catch (err) {
+        setStatus("Cannot reach api.php. From this folder run php -S localhost:8000");
+        setBusy(false);
+      }
+    }
+
+    async function post(body) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.error) {
+        setStatus(data.error || "Request failed");
+        return null;
+      }
+      return data;
+    }
+
+    async function decide(command) {
+      if (!current || busy) return;
+      cancelOpen();
+      setBusy(true);
+      const id = current.id;
+      const result = await post({ command: command, id: id });
+      if (!result) {
+        setBusy(false);
+        return;
+      }
+      seenId = null;
+      await fetchData();
+    }
+
+    async function setType(type) {
+      if (!current || busy) return;
+      setBusy(true);
+      const result = await post({ command: "type", id: current.id, type: type });
+      if (!result) {
+        setBusy(false);
+        return;
+      }
+      await fetchData("Type set to " + type);
+    }
+
+    async function saveNote() {
+      if (!current || busy) return;
+      setBusy(true);
+      const result = await post({ command: "note", id: current.id, note: noteEl.value });
+      if (!result) {
+        setBusy(false);
+        return;
+      }
+      noteEl.blur();
+      await fetchData("Note saved");
+    }
+
+    function openCurrent() {
+      const url = profileUrl(current);
+      if (!url) {
+        setStatus("No profile to open");
+        return;
+      }
+      window.open(url, "_blank", "noopener");
+    }
+
+    function buildLegend() {
+      const legend = document.getElementById("typeLegend");
+      TYPES.forEach((pair) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.type = pair[1];
+        const kbd = document.createElement("kbd");
+        kbd.textContent = pair[0].toUpperCase();
+        btn.appendChild(kbd);
+        btn.appendChild(document.createTextNode(pair[1]));
+        btn.addEventListener("click", () => setType(pair[1]));
+        legend.appendChild(btn);
+      });
+    }
+
+    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+    document.getElementById("keepBtn").addEventListener("click", () => decide("keep"));
+    document.getElementById("unfollowBtn").addEventListener("click", () => decide("unfollow"));
+    document.getElementById("movedBtn").addEventListener("click", () => decide("moved"));
+    document.getElementById("openBtn").addEventListener("click", openCurrent);
+    document.getElementById("refreshBtn").addEventListener("click", () => fetchData("Refreshed"));
+    document.getElementById("noteBtn").addEventListener("click", saveNote);
+    document.getElementById("autoOpenBtn").addEventListener("click", () => {
+      autoOpen = !autoOpen;
+      localStorage.setItem("xfr-auto-open", String(autoOpen));
+      syncToggles();
+    });
+    document.getElementById("soundBtn").addEventListener("click", () => {
+      soundOn = !soundOn;
+      localStorage.setItem("xfr-sound", String(soundOn));
+      syncToggles();
+      if (soundOn) playBeep();
+    });
+    noteEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveNote();
+      } else if (event.key === "Escape") {
+        noteEl.blur();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;
+      const tag = event.target && event.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      const key = event.key.toLowerCase();
+      if (key === "1") decide("keep");
+      else if (key === "2") decide("unfollow");
+      else if (key === "3") decide("moved");
+      else if (key === "o") openCurrent();
+      else if (key === "r") fetchData("Refreshed");
+      else {
+        const match = TYPES.find((pair) => pair[0] === key);
+        if (match) setType(match[1]);
+      }
+    });
+
+    buildLegend();
+    initTheme();
+    syncToggles();
+    fetchData();
+  </script>
+</body>
+</html>
